@@ -1,0 +1,674 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["audio", "quran"]
+}
+
+model recitation {
+  recitation_id Int     @id @default(autoincrement())
+  reciter_id    Int
+  style_id      Int?
+  is_enabled    Boolean @default(true)
+  reciter       reciter @relation(fields: [reciter_id], references: [reciter_id], onDelete: Cascade)
+  style         style?  @relation(fields: [style_id], references: [style_id], onDelete: Cascade)
+
+  @@unique([reciter_id, style_id])
+  @@schema("audio")
+}
+
+model reciter {
+  reciter_id Int          @id(map: "_reciter_pkey") @default(dbgenerated("nextval('audio._reciter_reciter_id_seq'::regclass)"))
+  path       String?      @unique(map: "_reciter_path_key")
+  slug       String?      @unique(map: "_reciter_slug_key")
+  english    String       @unique(map: "_reciter_english_key")
+  arabic     String       @unique(map: "_reciter_arabic_key")
+  recitation recitation[]
+
+  @@schema("audio")
+}
+
+model style {
+  style_id   Int          @id(map: "_style_pkey") @default(dbgenerated("nextval('audio._style_style_id_seq'::regclass)"))
+  path       String       @unique(map: "_style_path_key")
+  slug       String       @unique(map: "_style_slug_key")
+  english    String       @unique(map: "_style_english_key")
+  arabic     String       @unique(map: "_style_arabic_key")
+  recitation recitation[]
+
+  @@schema("audio")
+}
+
+model ar_internal_metadata {
+  key        String   @id @db.VarChar
+  value      String?  @db.VarChar
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model audio_files {
+  id            Int      @id @default(autoincrement())
+  verse_id      Int?
+  url           String?
+  duration      Int?
+  segments      String?
+  mime_type     String?  @db.VarChar
+  format        String?  @db.VarChar
+  is_enabled    Boolean?
+  recitation_id Int?
+  created_at    DateTime @db.Timestamp(6)
+  updated_at    DateTime @db.Timestamp(6)
+
+  @@index([is_enabled], map: "index_audio_files_on_is_enabled")
+  @@index([recitation_id], map: "index_audio_files_on_recitation_id")
+  @@index([verse_id], map: "index_audio_files_on_verse_id")
+  @@schema("quran")
+}
+
+model authors {
+  id         Int      @id @default(autoincrement())
+  name       String?  @db.VarChar
+  url        String?  @db.VarChar
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model chapter_infos {
+  id                  Int      @id @default(autoincrement())
+  chapter_id          Int?
+  text                String?
+  source              String?  @db.VarChar
+  short_text          String?
+  language_id         Int?
+  resource_content_id Int?
+  language_name       String?  @db.VarChar
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+
+  @@index([chapter_id], map: "index_chapter_infos_on_chapter_id")
+  @@index([language_id], map: "index_chapter_infos_on_language_id")
+  @@index([resource_content_id], map: "index_chapter_infos_on_resource_content_id")
+  @@schema("quran")
+}
+
+model chapters {
+  id               Int      @id @default(autoincrement())
+  bismillah_pre    Boolean?
+  revelation_order Int?
+  revelation_place String?  @db.VarChar
+  name_complex     String?  @db.VarChar
+  name_arabic      String?  @db.VarChar
+  name_simple      String?  @db.VarChar
+  pages            String?  @db.VarChar
+  verses_count     Int?
+  chapter_number   Int?
+  created_at       DateTime @db.Timestamp(6)
+  updated_at       DateTime @db.Timestamp(6)
+
+  @@index([chapter_number], map: "index_chapters_on_chapter_number")
+  @@schema("quran")
+}
+
+model char_type {
+  char_type_id    Int         @id @default(autoincrement())
+  name            String
+  description     String?
+  parent_id       Int?
+  char_type       char_type?  @relation("char_typeTochar_type", fields: [parent_id], references: [char_type_id])
+  other_char_type char_type[] @relation("char_typeTochar_type")
+
+  @@unique([name, parent_id])
+  @@schema("quran")
+}
+
+model char_types {
+  id          Int      @id @default(autoincrement())
+  name        String?  @db.VarChar
+  parent_id   Int?
+  description String?
+  created_at  DateTime @db.Timestamp(6)
+  updated_at  DateTime @db.Timestamp(6)
+
+  @@index([parent_id], map: "index_char_types_on_parent_id")
+  @@schema("quran")
+}
+
+model data_sources {
+  id         Int      @id @default(autoincrement())
+  name       String?  @db.VarChar
+  url        String?  @db.VarChar
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model foot_notes {
+  id                  Int      @id @default(autoincrement())
+  translation_id      Int?
+  text                String?
+  language_id         Int?
+  language_name       String?  @db.VarChar
+  resource_content_id Int?
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+
+  @@index([language_id], map: "index_foot_notes_on_language_id")
+  @@index([resource_content_id], map: "index_foot_notes_on_resource_content_id")
+  @@index([translation_id], map: "index_foot_notes_on_translation_id")
+  @@schema("quran")
+}
+
+model images {
+  id                  Int      @id @default(autoincrement())
+  verse_id            Int?
+  resource_content_id Int?
+  width               Int?
+  url                 String?  @db.VarChar
+  alt                 String?
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+
+  @@index([resource_content_id], map: "index_images_on_resource_content_id")
+  @@index([verse_id], map: "index_images_on_verse_id")
+  @@schema("quran")
+}
+
+model juzs {
+  id            Int      @id @default(autoincrement())
+  juz_number    Int?
+  created_at    DateTime @db.Timestamp(6)
+  updated_at    DateTime @db.Timestamp(6)
+  verse_mapping Json?    @db.Json
+
+  @@index([juz_number], map: "index_juzs_on_juz_number")
+  @@schema("quran")
+}
+
+model languages {
+  id                  Int      @id @default(autoincrement())
+  name                String?  @db.VarChar
+  iso_code            String?  @db.VarChar
+  native_name         String?  @db.VarChar
+  direction           String?  @db.VarChar
+  es_analyzer_default String?  @db.VarChar
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+  es_indexes          String?  @db.VarChar
+  translations_count  Int?
+
+  @@index([iso_code], map: "index_languages_on_iso_code")
+  @@index([translations_count], map: "index_languages_on_translations_count")
+  @@schema("quran")
+}
+
+model lemma {
+  lemma_id Int    @id @default(autoincrement())
+  value    String @unique @db.VarChar(50)
+  clean    String @db.VarChar(50)
+
+  @@schema("quran")
+}
+
+model lemmas {
+  id          Int           @id @default(autoincrement())
+  text_madani String?       @db.VarChar
+  text_clean  String?       @db.VarChar
+  created_at  DateTime      @db.Timestamp(6)
+  updated_at  DateTime      @db.Timestamp(6)
+  word_lemmas word_lemmas[]
+
+  @@schema("quran")
+}
+
+model media_contents {
+  id                  Int      @id @default(autoincrement())
+  resource_type       String?  @db.VarChar
+  resource_id         Int?
+  url                 String?
+  duration            String?  @db.VarChar
+  embed_text          String?
+  provider            String?  @db.VarChar
+  language_id         Int?
+  language_name       String?  @db.VarChar
+  author_name         String?  @db.VarChar
+  resource_content_id Int?
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+
+  @@index([language_id], map: "index_media_contents_on_language_id")
+  @@index([resource_content_id], map: "index_media_contents_on_resource_content_id")
+  @@index([resource_type, resource_id], map: "index_media_contents_on_resource_type_and_resource_id")
+  @@schema("quran")
+}
+
+model recitation_styles {
+  id         Int      @id @default(autoincrement())
+  style      String?  @db.VarChar
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model recitations {
+  id                  Int      @id @default(autoincrement())
+  reciter_id          Int?
+  resource_content_id Int?
+  recitation_style_id Int?
+  reciter_name        String?  @db.VarChar
+  style               String?  @db.VarChar
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+
+  @@index([recitation_style_id], map: "index_recitations_on_recitation_style_id")
+  @@index([reciter_id], map: "index_recitations_on_reciter_id")
+  @@index([resource_content_id], map: "index_recitations_on_resource_content_id")
+  @@schema("quran")
+}
+
+model reciters {
+  id         Int      @id @default(autoincrement())
+  name       String?  @db.VarChar
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model resource_content_stats {
+  id                  Int      @id @default(autoincrement())
+  resource_content_id Int?
+  download_count      Int?
+  platform            String?  @db.VarChar
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+
+  @@index([platform], map: "index_resource_content_stats_on_platform")
+  @@index([resource_content_id], map: "index_resource_content_stats_on_resource_content_id")
+  @@schema("quran")
+}
+
+model resource_contents {
+  id                    Int      @id @default(autoincrement())
+  approved              Boolean?
+  author_id             Int?
+  data_source_id        Int?
+  author_name           String?  @db.VarChar
+  resource_type         String?  @db.VarChar
+  sub_type              String?  @db.VarChar
+  name                  String?  @db.VarChar
+  description           String?
+  cardinality_type      String?  @db.VarChar
+  language_id           Int?
+  language_name         String?  @db.VarChar
+  created_at            DateTime @db.Timestamp(6)
+  updated_at            DateTime @db.Timestamp(6)
+  slug                  String?  @db.VarChar
+  mobile_translation_id Int?
+  priority              Int?
+
+  @@index([approved], map: "index_resource_contents_on_approved")
+  @@index([author_id], map: "index_resource_contents_on_author_id")
+  @@index([cardinality_type], map: "index_resource_contents_on_cardinality_type")
+  @@index([data_source_id], map: "index_resource_contents_on_data_source_id")
+  @@index([language_id], map: "index_resource_contents_on_language_id")
+  @@index([mobile_translation_id], map: "index_resource_contents_on_mobile_translation_id")
+  @@index([priority], map: "index_resource_contents_on_priority")
+  @@index([resource_type], map: "index_resource_contents_on_resource_type")
+  @@index([slug], map: "index_resource_contents_on_slug")
+  @@index([sub_type], map: "index_resource_contents_on_sub_type")
+  @@schema("quran")
+}
+
+model roots {
+  id         Int      @id @default(autoincrement())
+  value      String?  @db.VarChar
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model schema_migrations {
+  version String @unique(map: "unique_schema_migrations") @db.VarChar
+
+  @@schema("quran")
+}
+
+model slugs {
+  id         BigInt   @id @default(autoincrement())
+  chapter_id BigInt?
+  slug       String?  @db.VarChar
+  locale     String?  @db.VarChar
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@index([chapter_id], map: "index_slugs_on_chapter_id")
+  @@index([chapter_id, slug], map: "index_slugs_on_chapter_id_and_slug")
+  @@schema("quran")
+}
+
+model stems {
+  id          Int          @id @default(autoincrement())
+  text_madani String?      @db.VarChar
+  text_clean  String?      @db.VarChar
+  created_at  DateTime     @db.Timestamp(6)
+  updated_at  DateTime     @db.Timestamp(6)
+  word_stems  word_stems[]
+
+  @@schema("quran")
+}
+
+model tafsirs {
+  id                  Int      @id @default(autoincrement())
+  verse_id            Int?
+  language_id         Int?
+  text                String?
+  language_name       String?  @db.VarChar
+  resource_content_id Int?
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+  resource_name       String?  @db.VarChar
+  verse_key           String?  @db.VarChar
+
+  @@index([language_id], map: "index_tafsirs_on_language_id")
+  @@index([resource_content_id], map: "index_tafsirs_on_resource_content_id")
+  @@index([verse_id], map: "index_tafsirs_on_verse_id")
+  @@index([verse_key], map: "index_tafsirs_on_verse_key")
+  @@schema("quran")
+}
+
+model tokens {
+  id                   Int      @id @default(autoincrement())
+  text_uthmani         String?  @db.VarChar
+  text_imlaei_simple   String?  @db.VarChar
+  text_indopak         String?  @db.VarChar
+  created_at           DateTime @db.Timestamp(6)
+  updated_at           DateTime @db.Timestamp(6)
+  text_imlaei          String?  @db.VarChar
+  text_uthmani_tajweed String?  @db.VarChar
+
+  @@schema("quran")
+}
+
+model topics {
+  id         Int      @id @default(autoincrement())
+  name       String?  @db.VarChar
+  parent_id  Int?
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@index([parent_id], map: "index_topics_on_parent_id")
+  @@schema("quran")
+}
+
+model translated_names {
+  id                Int      @id @default(autoincrement())
+  resource_type     String?  @db.VarChar
+  resource_id       Int?
+  language_id       Int?
+  name              String?  @db.VarChar
+  language_name     String?  @db.VarChar
+  created_at        DateTime @db.Timestamp(6)
+  updated_at        DateTime @db.Timestamp(6)
+  language_priority Int?
+
+  @@index([language_id], map: "index_translated_names_on_language_id")
+  @@index([language_priority], map: "index_translated_names_on_language_priority")
+  @@index([resource_type, resource_id], map: "index_translated_names_on_resource_type_and_resource_id")
+  @@schema("quran")
+}
+
+model translations {
+  id                  Int      @id @default(autoincrement())
+  language_id         Int?
+  text                String?
+  resource_content_id Int?
+  verse_id            Int?
+  language_name       String?  @db.VarChar
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+  resource_name       String?  @db.VarChar
+  priority            Int?
+
+  @@index([language_id], map: "index_translations_on_language_id")
+  @@index([priority], map: "index_translations_on_priority")
+  @@index([resource_content_id], map: "index_translations_on_resource_content_id")
+  @@index([verse_id], map: "index_translations_on_verse_id")
+  @@schema("quran")
+}
+
+model transliterations {
+  id                  Int      @id @default(autoincrement())
+  resource_type       String?  @db.VarChar
+  resource_id         Int?
+  language_id         Int?
+  text                String?
+  language_name       String?  @db.VarChar
+  resource_content_id Int?
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+
+  @@index([language_id], map: "index_transliterations_on_language_id")
+  @@index([resource_content_id], map: "index_transliterations_on_resource_content_id")
+  @@index([resource_type, resource_id], map: "index_transliterations_on_resource_type_and_resource_id")
+  @@schema("quran")
+}
+
+model verse_lemmas {
+  id          Int      @id @default(autoincrement())
+  text_madani String?  @db.VarChar
+  text_clean  String?  @db.VarChar
+  created_at  DateTime @db.Timestamp(6)
+  updated_at  DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model verse_roots {
+  id         Int      @id @default(autoincrement())
+  value      String?
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model verse_stems {
+  id          Int      @id @default(autoincrement())
+  text_madani String?  @db.VarChar
+  text_clean  String?  @db.VarChar
+  created_at  DateTime @db.Timestamp(6)
+  updated_at  DateTime @db.Timestamp(6)
+
+  @@schema("quran")
+}
+
+model verses {
+  id                   Int      @id @default(autoincrement())
+  chapter_id           Int?
+  verse_number         Int?
+  verse_index          Int?
+  verse_key            String?  @db.VarChar
+  text_uthmani         String?  @db.VarChar
+  text_indopak         String?  @db.VarChar
+  text_imlaei_simple   String?  @db.VarChar
+  juz_number           Int?
+  hizb_number          Int?
+  rub_number           Int?
+  sajdah_type          String?  @db.VarChar
+  sajdah_number        Int?
+  page_number          Int?
+  created_at           DateTime @db.Timestamp(6)
+  updated_at           DateTime @db.Timestamp(6)
+  image_url            String?
+  image_width          Int?
+  verse_root_id        Int?
+  verse_lemma_id       Int?
+  verse_stem_id        Int?
+  text_imlaei          String?  @db.VarChar
+  text_uthmani_simple  String?  @db.VarChar
+  text_uthmani_tajweed String?
+
+  @@index([chapter_id], map: "index_verses_on_chapter_id")
+  @@index([verse_index], map: "index_verses_on_verse_index")
+  @@index([verse_key], map: "index_verses_on_verse_key")
+  @@index([verse_lemma_id], map: "index_verses_on_verse_lemma_id")
+  @@index([verse_number], map: "index_verses_on_verse_number")
+  @@index([verse_root_id], map: "index_verses_on_verse_root_id")
+  @@index([verse_stem_id], map: "index_verses_on_verse_stem_id")
+  @@schema("quran")
+}
+
+model view {
+  view_id Int @id @default(autoincrement())
+
+  @@schema("quran")
+}
+
+model word_corpus {
+  corpus_id       Int     @id @default(autoincrement())
+  word_id         Int?
+  location        String? @db.VarChar
+  description     String? @db.VarChar
+  transliteration String? @db.VarChar
+  image_src       String? @db.VarChar
+  segment         Json?   @db.Json
+
+  @@index([word_id], map: "index_quran.word_corpus_on_word_id")
+  @@schema("quran")
+}
+
+model word_corpuses {
+  id          Int      @id @default(autoincrement())
+  word_id     Int?
+  location    String?  @db.VarChar
+  description String?
+  image_src   String?  @db.VarChar
+  segments    Json?    @db.Json
+  created_at  DateTime @db.Timestamp(6)
+  updated_at  DateTime @db.Timestamp(6)
+
+  @@index([word_id], map: "index_word_corpuses_on_word_id")
+  @@schema("quran")
+}
+
+model word_lemmas {
+  id         Int      @id @default(autoincrement())
+  word_id    Int?
+  lemma_id   Int?
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+  words      words?   @relation(fields: [word_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rails_af367088a5")
+  lemmas     lemmas?  @relation(fields: [lemma_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rails_cf1f59048d")
+
+  @@index([lemma_id], map: "index_word_lemmas_on_lemma_id")
+  @@index([word_id], map: "index_word_lemmas_on_word_id")
+  @@schema("quran")
+}
+
+model word_roots {
+  id         Int      @id @default(autoincrement())
+  word_id    Int?
+  root_id    Int?
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+
+  @@index([root_id], map: "index_word_roots_on_root_id")
+  @@index([word_id], map: "index_word_roots_on_word_id")
+  @@schema("quran")
+}
+
+model word_stems {
+  id         Int      @id @default(autoincrement())
+  word_id    Int?
+  stem_id    Int?
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @db.Timestamp(6)
+  words      words?   @relation(fields: [word_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rails_24cfb9fc97")
+  stems      stems?   @relation(fields: [stem_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rails_d7975076d8")
+
+  @@index([stem_id], map: "index_word_stems_on_stem_id")
+  @@index([word_id], map: "index_word_stems_on_word_id")
+  @@schema("quran")
+}
+
+model word_translations {
+  id                  BigInt   @id @default(autoincrement())
+  word_id             Int?
+  text                String?  @db.VarChar
+  language_name       String?  @db.VarChar
+  language_id         Int?
+  resource_content_id Int?
+  priority            Int?
+  created_at          DateTime @db.Timestamp(6)
+  updated_at          DateTime @db.Timestamp(6)
+
+  @@index([priority], map: "index_word_translations_on_priority")
+  @@index([word_id, language_id], map: "index_word_translations_on_word_id_and_language_id")
+  @@schema("quran")
+}
+
+model word_transliteration {
+  transliteration_id Int     @id @default(autoincrement())
+  word_id            Int?
+  language_code      String? @db.VarChar
+  value              String? @db.VarChar
+
+  @@index([word_id], map: "index_quran.word_transliteration_on_word_id")
+  @@schema("quran")
+}
+
+model words {
+  id                   Int           @id @default(autoincrement())
+  verse_id             Int?
+  chapter_id           Int?
+  position             Int?
+  text_uthmani         String?       @db.VarChar
+  text_indopak         String?       @db.VarChar
+  text_imlaei_simple   String?       @db.VarChar
+  verse_key            String?       @db.VarChar
+  page_number          Int?
+  class_name           String?       @db.VarChar
+  line_number          Int?
+  code_dec             Int?
+  code_hex             String?       @db.VarChar
+  code_hex_v3          String?       @db.VarChar
+  code_dec_v3          Int?
+  char_type_id         Int?
+  created_at           DateTime      @db.Timestamp(6)
+  updated_at           DateTime      @db.Timestamp(6)
+  pause_name           String?       @db.VarChar
+  audio_url            String?       @db.VarChar
+  image_blob           String?
+  image_url            String?       @db.VarChar
+  token_id             Int?
+  topic_id             Int?
+  location             String?       @db.VarChar
+  char_type_name       String?       @db.VarChar
+  text_imlaei          String?       @db.VarChar
+  text_uthmani_simple  String?       @db.VarChar
+  text_uthmani_tajweed String?       @db.VarChar
+  en_transliteration   String?       @db.VarChar
+  word_lemmas          word_lemmas[]
+  word_stems           word_stems[]
+
+  @@index([chapter_id], map: "index_words_on_chapter_id")
+  @@index([char_type_id], map: "index_words_on_char_type_id")
+  @@index([location], map: "index_words_on_location")
+  @@index([position], map: "index_words_on_position")
+  @@index([token_id], map: "index_words_on_token_id")
+  @@index([topic_id], map: "index_words_on_topic_id")
+  @@index([verse_id], map: "index_words_on_verse_id")
+  @@index([verse_key], map: "index_words_on_verse_key")
+  @@schema("quran")
+}
